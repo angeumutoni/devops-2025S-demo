@@ -11,6 +11,8 @@ jobs:
   code:
     name: Code scan (Bandit)
     runs-on: ubuntu-latest
+    # Policy: warn only. The one finding (B105, Low severity) is fixed, and
+    # blocking on Low findings adds noise without a matching risk.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +27,7 @@ jobs:
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
+    # Policy: blocking. Any real secret fails the build, no threshold.
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +40,7 @@ jobs:
   image:
     name: Image scan
     runs-on: ubuntu-latest
+    # Policy: blocking on CRITICAL vulnerabilities that have a published fix.
     steps:
       - uses: actions/checkout@v4
       - name: Build the image
@@ -45,13 +49,15 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: campus-notifier:dev
-          severity: HIGH,CRITICAL
-          exit-code: "0"
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
           format: table
 
   iac:
     name: IaC scan
     runs-on: ubuntu-latest
+    # Policy: blocking. Insecure Terraform fails the build.
     steps:
       - uses: actions/checkout@v4
       - name: Checkov
@@ -60,4 +66,9 @@ jobs:
           directory: .
           framework: terraform
           quiet: true
-          soft_fail: true
+          # Accepted risk, CKV_AWS_136 (ECR encrypted with KMS): this is a
+          # teaching repo, the default AES256 encryption is acceptable and a
+          # customer-managed KMS key adds cost. Owner: Ange Umutoni.
+          # Revisit before any production use.
+          skip_check: CKV_AWS_136
+          soft_fail: false
