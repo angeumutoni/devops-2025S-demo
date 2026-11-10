@@ -9,3 +9,10 @@ repos:
         # args: [--fix, --exit-zero-on-fix] # Fix issues and exit with zero if fixes are applied.
       # Ruff for formatting.
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: gitleaks-docker
+        name: Detect hardcoded secrets
+        language: system
+        pass_filenames: false
+        entry: bash -c 'docker run --rm -v "$PWD:/path" -w /path zricethezav/gitleaks:v8.30.1 git --pre-commit --staged --redact -v /path'
